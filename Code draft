@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mandaue Road-Crash WebGIS</title>
+
+<style>
+:root {
+    --navy: #102a43;
+    --blue: #3498db;
+    --red: #e74c3c;
+    --green: #27ae60;
+    --yellow: #f1c40f;
+    --orange: #e67e22;
+    --light: #f5f7fa;
+    --border: #d9e2ec;
+    --text: #243b53;
+    --muted: #627d98;
+    --white: #ffffff;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Inter, Roboto, Arial, sans-serif;
+    background: var(--light);
+    color: var(--text);
+}
+
+/* ================= HEADER ================= */
+
+.header {
+    height: 64px;
+    background: var(--navy);
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 0 20px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    min-width: 235px;
+}
+
+.logo-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: white;
+    color: var(--navy);
+    display: grid;
+    place-items: center;
+}
+
+.search {
+    flex: 1;
+    max-width: 420px;
+}
+
+.search input {
+    width: 100%;
+    padding: 11px 16px;
+    border: none;
+    border-radius: 8px;
+    outline: none;
+}
+
+.emergency {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.emergency button {
+    border: none;
+    color: white;
+    padding: 10px 14px;
+    border-radius: 7px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.team { background: var(--blue); }
+.cdrrmo { background: var(--red); }
+.hospital { background: var(--green); }
+
+.emergency button:hover {
+    filter: brightness(0.9);
+}
+
+/* ================= SIDEBAR ================= */
+
+.sidebar {
+    position: fixed;
+    top: 64px;
+    bottom: 0;
+    left: 0;
+    width: 245px;
+    background: white;
+    border-right: 1px solid var(--border);
+    z-index: 900;
+    overflow-y: auto;
+}
+
+.nav-item {
+    padding: 15px 20px;
+    cursor: pointer;
+    border-left: 4px solid transparent;
+}
+
+.nav-item:hover,
+.nav-item.active {
+    background: #eaf4fb;
+    border-left-color: var(--blue);
+}
+
+.section {
+    padding: 20px;
+    border-top: 1px solid var(--border);
+}
+
+.section h4 {
+    margin: 0 0 14px;
+    font-size: 13px;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.layer {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 11px 0;
+    font-size: 14px;
+}
+
+input[type="range"] {
+    width: 100%;
+}
+
+.range-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+/* ================= MAIN ================= */
+
+.main {
+    margin-left: 245px;
+    padding-top: 64px;
+    min-height: 100vh;
+}
+
+/* ================= MAP ================= */
+
+.map {
+    height: calc(100vh - 64px);
+    min-height: 700px;
+    position: relative;
+    overflow: hidden;
+
+    /* fake map background */
+    background:
+        linear-gradient(45deg, transparent 48%, rgba(255,255,255,.65) 49%, rgba(255,255,255,.65) 51%, transparent 52%),
+        linear-gradient(-30deg, transparent 48%, rgba(255,255,255,.55) 49%, rgba(255,255,255,.55) 51%, transparent 52%),
+        repeating-linear-gradient(90deg, rgba(60,120,160,.08) 0 2px, transparent 2px 90px),
+        repeating-linear-gradient(0deg, rgba(60,120,160,.08) 0 2px, transparent 2px 80px),
+        #dbeef5;
+    background-size: 180px 180px, 220px 220px, auto, auto, auto;
+}
+
+/* water */
+
+.map::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 24%;
+    height: 100%;
+    background: #a9d8e8;
+    clip-path: polygon(35% 0,100% 0,100% 100%,0 100%,12% 75%,20% 55%,12% 35%);
+    opacity: .8;
+}
+
+/* roads */
+
+.road {
+    position: absolute;
+    height: 7px;
+    background: white;
+    box-shadow: 0 0 0 2px #9aa9b8;
+    transform-origin: left center;
+    z-index: 2;
+}
+
+.road.one {
+    width: 850px;
+    top: 48%;
+    left: 5%;
+    transform: rotate(-12deg);
+}
+
+.road.two {
+    width: 650px;
+    top: 28%;
+    left: 20%;
+    transform: rotate(24deg);
+}
+
+.road.three {
+    width: 700px;
+    top: 72%;
+    left: 4%;
+    transform: rotate(7deg);
+}
+
+.road.four {
+    width: 580px;
+    top: 15%;
+    left: 52%;
+    transform: rotate(78deg);
+}
+
+/* heatmap */
+
+.heat {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(25px);
+    opacity: .65;
+    z-index: 1;
+}
+
+.heat.green { background: #2ecc71; }
+.heat.yellow { background: #f1c40f; }
+.heat.orange { background: #e67e22; }
+.heat.red { background: #e74c3c; }
+
+.h1 { width: 220px; height: 180px; left: 20%; top: 35%; }
+.h2 { width: 190px; height: 190px; left: 48%; top: 20%; }
+.h3 { width: 230px; height: 190px; left: 65%; top: 58%; }
+.h4 { width: 160px; height: 150px; left: 8%; top: 65%; }
+.h5 { width: 180px; height: 150px; left: 73%; top: 15%; }
+
+/* hotspot */
+
+.hotspot {
+    position: absolute;
+    width: 140px;
+    height: 110px;
+    border: 3px solid var(--red);
+    background: rgba(231,76,60,.16);
+    transform: rotate(-15deg);
+    z-index: 3;
+}
+
+.hs1 { left: 35%; top: 32%; }
+.hs2 { left: 60%; top: 48%; }
+
+/* ================= CRASH MARKERS ================= */
+
+.marker {
+    position: absolute;
+    width: 27px;
+    height: 27px;
+    border-radius: 50%;
+    background: var(--red);
+    border: 3px solid white;
+    box-shadow: 0 2px 7px rgba(0,0,0,.35);
+    z-index: 10;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    transition: .2s;
+}
+
+.marker:hover {
+    transform: scale(1.35);
+}
+
+.m1 { left: 28%; top: 44%; }
+.m2 { left: 42%; top: 35%; }
+.m3 { left: 55%; top: 51%; }
+.m4 { left: 68%; top: 40%; }
+.m5 { left: 74%; top: 67%; }
+.m6 { left: 19%; top: 64%; }
+.m7 { left: 49%; top: 68%; }
+.m8 { left: 61%; top: 25%; }
+
+/* ================= MAP CONTROLS ================= */
+
+.map-controls {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+}
+
+.map-controls button {
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--border);
+    background: white;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+.map-label {
+    position: absolute;
+    z-index: 5;
+    font-weight: 800;
+    font-size: 22px;
+    color: #243b53;
+    text-shadow: 1px 1px white;
+}
+
+.mandaue-label {
+    left: 43%;
+    top: 47%;
+}
+
+.barangay {
+    position: absolute;
+    z-index: 5;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.b1 { left: 23%; top: 22%; }
+.b2 { left: 67%; top: 29%; }
+.b3 { left: 75%; top: 52%; }
+
+/* ================= LEGEND ================= */
+
+.legend {
+    position: absolute;
+    bottom: 25px;
+    left: 25px;
+    z-index: 50;
+    background: white;
+    padding: 15px;
+    border-radius: 9px;
+    box-shadow: 0 3px 15px rgba(0,0,0,.15);
+}
+
+.legend-title {
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.legend-bar {
+    width: 220px;
+    height: 15px;
+    background: linear-gradient(
+        90deg,
+        #2ecc71,
+        #f1c40f,
+        #e67e22,
+        #e74c3c
+    );
+    border-radius: 5px;
+}
+
+.legend-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    margin-top: 5px;
+}
+
+/* ================= ROUTE PANEL ================= */
+
+.route-panel {
+    position: absolute;
+    right: 20px;
+    top: 20px;
+    width: 330px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 5px 25px rgba(0,0,0,.2);
+    z-index: 100;
+    padding: 20px;
+}
+
+.route-panel h2 {
+    margin-top: 0;
+    font-size: 19px;
+}
+
+.field {
+    margin-bottom: 12px;
+}
+
+.field label {
+    display: block;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.field input {
+    width: 100%;
+    padding: 11px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+.route-btn {
+    width: 100%;
+    border: none;
+    background: var(--blue);
+    color: white;
+    padding: 12px;
+    border-radius: 7px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.risk-result {
+    margin-top: 15px;
+    padding: 15px;
+    background: #fff8df;
+    border-radius: 8px;
+    display: none;
+}
+
+.risk-badge {
+    display: inline-block;
+    padding: 9px 14px;
+    border-radius: 20px;
+    background: var(--yellow);
+    font-weight: 800;
+}
+
+.route-line {
+    height: 7px;
+    margin: 15px 0;
+    border-radius: 10px;
+    background: linear-gradient(
+        90deg,
+        #2ecc71 0 25%,
+        #f1c40f 25% 55%,
+        #e67e22 55% 75%,
+        #e74c3c 75%
+    );
+}
+
+.risk-item {
+    padding: 9px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+}
+
+/* ================= POPUP ================= */
+
+.popup {
+    position: absolute;
+    left: 48%;
+    top: 37%;
+    width: 300px;
+    background: white;
+    padding: 18px;
+    border-radius: 9px;
+    box-shadow: 0 6px 25px rgba(0,0,0,.25);
+    z-index: 200;
+    display: none;
+}
+
+.popup h3 {
+    margin-top: 0;
+}
+
+.detail {
+    display: flex;
+    justify-content: space-between;
+    padding: 7px 0;
+    border-bottom: 1px solid #edf2f7;
+    font-size: 13px;
+}
+
+.popup-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.popup-actions button {
+    flex: 1;
+    padding: 9px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    cursor: pointer;
+}
+
+/* ================= MODAL ================= */
+
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.5);
+    display: none;
+    place-items: center;
+    z-index: 2000;
+}
+
+.modal-card {
+    width: 380px;
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+}
+
+.modal-card h2 {
+    margin-top: 0;
+}
+
+.gps {
+    padding: 12px;
+    background: #f1f5f9;
+    border-radius: 7px;
+    margin: 15px 0;
+    font-size: 13px;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.modal-buttons button {
+    flex: 1;
+    padding: 11px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+}
+
+.call {
+    background: var(--blue);
+    color: white;
+    border: none !important;
+}
+
+/* ================= DASHBOARDS ================= */
+
+.dashboard {
+    display: none;
+    padding: 25px;
+}
+
+.dashboard.active {
+    display: block;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+.card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.card h3 {
+    margin-top: 0;
+}
+
+.chart {
+    height: 180px;
+    border-left: 2px solid #bcccdc;
+    border-bottom: 2px solid #bcccdc;
+    position: relative;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent 0 35px,
+        #edf2f7 36px
+    );
+}
+
+.chart-line {
+    position: absolute;
+    left: 5%;
+    right: 5%;
+    top: 45%;
+    height: 80px;
+    border-top: 4px solid var(--blue);
+    transform: skewY(-10deg);
+}
+
+/* ================= ADMIN ================= */
+
+.upload {
+    border: 2px dashed #9fb3c8;
+    padding: 50px;
+    text-align: center;
+    border-radius: 10px;
+    background: white;
+}
+
+.warning {
+    margin-top: 20px;
+    padding: 15px;
+    background: #fff8df;
+    border-radius: 8px;
+}
+
+/* ================= MOBILE ================= */
+
+.mobile-nav {
+    display: none;
+}
+
+@media(max-width: 900px) {
+
+    .sidebar {
+        width: 70px;
+    }
+
+    .sidebar .nav-item {
+        font-size: 0;
+        text-align: center;
+    }
+
+    .sidebar .nav-item::first-letter {
+        font-size: 20px;
+    }
+
+    .main {
+        margin-left: 70px;
+    }
+
+    .logo {
+        min-width: auto;
+    }
+
+    .logo span {
+        display: none;
+    }
+
+    .search {
+        max-width: none;
+    }
+
+    .emergency button {
+        padding: 9px;
+        font-size: 0;
+    }
+
+    .emergency button::first-letter {
+        font-size: 18px;
+    }
+
+    .route-panel {
+        width: 290px;
+    }
+}
+
+@media(max-width:600px) {
+
+    .header {
+        height: 55px;
+        padding: 0 10px;
+    }
+
+    .sidebar {
+        display: none;
+    }
+
+    .main {
+        margin-left: 0;
+        padding-top: 55px;
+    }
+
+    .map {
+        height: calc(100vh - 115px);
+        min-height: 600px;
+    }
+
+    .logo {
+        display: none;
+    }
+
+    .search {
+        width: 100%;
+    }
+
+    .emergency {
+        position: fixed;
+        bottom: 55px;
+        left: 0;
+        right: 0;
+        padding: 7px;
+        background: white;
+        z-index: 1000;
+    }
+
+    .emergency button {
+        flex: 1;
+        font-size: 12px;
+    }
+
+    .emergency button::first-letter {
+        font-size: inherit;
+    }
+
+    .route-panel {
+        top: 70px;
+        left: 10px;
+        right: 10px;
+        width: auto;
+    }
+
+    .popup {
+        left: 10px;
+        right: 10px;
+        width: auto;
+    }
+
+    .cards {
+        grid-template-columns: 1fr;
+    }
+
+    .mobile-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 55px;
+        background: white;
+        border-top: 1px solid var(--border);
+        z-index: 1200;
+        justify-content: space-around;
+    }
+
+    .mobile-nav button {
+        border: none;
+        background: white;
+        font-size: 11px;
+        color: var(--text);
+    }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ================= HEADER ================= -->
+
+<header class="header">
+
+    <div class="logo">
+        <div class="logo-icon">🗺️</div>
+        <span>Mandaue Road-Crash WebGIS</span>
+    </div>
+
+    <div class="search">
+        <input
+            type="text"
+            placeholder="Search location, road, or barangay..."
+        >
+    </div>
+
+    <div class="emergency">
+
+        <button
+            class="team"
+            onclick="openEmergency('TEAM')">
+            📞 TEAM
+        </button>
+
+        <button
+            class="cdrrmo"
+            onclick="openEmergency('CDRRMO')">
+            🚨 CDRRMO
+        </button>
+
+        <button
+            class="hospital"
+            onclick="openEmergency('Nearest Hospital')">
+            🏥 Hospital
+        </button>
+
+    </div>
+
+</header>
+
+
+<!-- ================= SIDEBAR ================= -->
+
+<aside class="sidebar">
+
+    <div class="nav-item active" onclick="showMap()">
+        🗺️ Map
+    </div>
+
+    <div class="nav-item" onclick="showAnalytics()">
+        📊 Analytics
+    </div>
+
+    <div class="nav-item" onclick="showRoute()">
+        🧭 Route Risk Checker
+    </div>
+
+    <div class="nav-item" onclick="showAdmin()">
+        ⬆️ Data Upload
+    </div>
+
+    <div class="section">
+
+        <h4>Layers</h4>
+
+        <label class="layer">
+            <input type="checkbox" checked>
+            Crash Heatmap
+        </label>
+
+        <label class="layer">
+            <input type="checkbox" checked>
+            Crash Points
+        </label>
+
+        <label class="layer">
+            <input type="checkbox" checked>
+            Hotspot Areas
+        </label>
+
+        <label class="layer">
+            <input type="checkbox" checked>
+            Barangay Boundaries
+        </label>
+
+        <label class="layer">
+            <input type="checkbox" checked>
+            Road Network
+        </label>
+
+        <label class="layer">
+            <input type="checkbox" checked>
+            Traffic Zones
+        </label>
+
+    </div>
+
+    <div class="section">
+
+        <h4>Time Range</h4>
+
+        <input
+            type="range"
+            min="2020"
+            max="2026"
+            value="2026"
+        >
+
+        <div class="range-label">
+            <span>2020</span>
+            <span>2026</span>
+        </div>
+
+    </div>
+
+    <div class="section">
+
+        <h4>Severity</h4>
+
+        <label class="layer">
+            <input type="checkbox" checked>
+            Fatal
+        </label>
+
+        <label class="layer">
+            <input type="checkbox" checked>
+            Injury
+        </label>
+
+        <label class="layer">
+            <input type="checkbox" checked>
+            Property Damage
+        </label>
+
+    </div>
+
+</aside>
+
+
+<!-- ================= MAIN ================= -->
+
+<main class="main">
+
+<!-- MAP -->
+
+<section id="mapView" class="map">
+
+    <div class="heat green h1"></div>
+    <div class="heat yellow h2"></div>
+    <div class="heat orange h3"></div>
+    <div class="heat red h4"></div>
+    <div class="heat orange h5"></div>
+
+    <div class="road one"></div>
+    <div class="road two"></div>
+    <div class="road three"></div>
+    <div class="road four"></div>
+
+    <div class="hotspot hs1"></div>
+    <div class="hotspot hs2"></div>
+
+    <div class="map-label mandaue-label">
+        Mandaue City
+    </div>
+
+    <div class="barangay b1">
+        Barangay Banilad
+    </div>
+
+    <div class="barangay b2">
+        Barangay Subangdaku
+    </div>
+
+    <div class="barangay b3">
+        Barangay Tipolo
+    </div>
+
+
+    <!-- Crash markers -->
+
+    <div class="marker m1"
+         onclick="openCrash()">
+        !
+    </div>
+
+    <div class="marker m2"
+         onclick="openCrash()">
+        !
+    </div>
+
+    <div class="marker m3"
+         onclick="openCrash()">
+        !
+    </div>
+
+    <div class="marker m4"
+         onclick="openCrash()">
+        !
+    </div>
+
+    <div class="marker m5"
+         onclick="openCrash()">
+        !
+    </div>
+
+    <div class="marker m6"
+         onclick="openCrash()">
+        !
+    </div>
+
+    <div class="marker m7"
+         onclick="openCrash()">
+        !
+    </div>
+
+    <div class="marker m8"
+         onclick="openCrash()">
+        !
+    </div>
+
+
+    <!-- Map controls -->
+
+    <div class="map-controls">
+        <button>+</button>
+        <button>−</button>
+        <button>⌖</button>
+    </div>
+
+
+    <!-- Route Checker -->
+
+    <div class="route-panel">
+
+        <h2>Route Risk Checker</h2>
+
+        <div class="field">
+            <label>Origin</label>
+            <input
+                id="origin"
+                value="Subangdaku"
+                placeholder="Enter origin">
+        </div>
+
+        <div class="field">
+            <label>Destination</label>
+            <input
+                id="destination"
+                value="Pacific Mall"
+                placeholder="Enter destination">
+        </div>
+
+        <button
+            class="route-btn"
+            onclick="checkRoute()">
+            Check Route Risk
+        </button>
+
+        <div
+            id="riskResult"
+            class="risk-result">
+
+            <span class="risk-badge">
+                ⚠️ Moderate Risk
+            </span>
+
+            <p>
+                <strong>Safety Rating:</strong>
+                58 / 100
+            </p>
+
+            <div class="route-line"></div>
+
+            <small>
+                Route distance: 7.4 km<br>
+                Estimated travel time: 18 min
+            </small>
+
+            <h4>
+                Top High-Risk Intersections
+            </h4>
+
+            <div class="risk-item">
+                🔴 A.S. Fortuna × UN Avenue
+            </div>
+
+            <div class="risk-item">
+                🔴 M.C. Briones × Jogja
+            </div>
+
+            <br>
+
+            <button
+                class="route-btn"
+                onclick="downloadReport()">
+                ⬇ Download Report
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- Legend -->
+
+    <div class="legend">
+
+        <div class="legend-title">
+            Crash Rate Index (0–100)
+        </div>
+
+        <div class="legend-bar"></div>
+
+        <div class="legend-labels">
+            <span>0–25</span>
+            <span>26–50</span>
+            <span>51–75</span>
+            <span>76–100</span>
+        </div>
+
+    </div>
+
+
+    <!-- Crash Popup -->
+
+    <div
+        id="crashPopup"
+        class="popup">
+
+        <span
+            class="close"
+            onclick="closeCrash()">
+            ✕
+        </span>
+
+        <h3>
+            Crash ID: MC-2024-1187
+        </h3>
+
+        <div class="detail">
+            <span>Date</span>
+            <strong>Jan 15, 2024</strong>
+        </div>
+
+        <div class="detail">
+            <span>Time</span>
+            <strong>08:32 AM</strong>
