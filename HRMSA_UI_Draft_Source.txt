@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HRMSA — Historical Road-Crash Mapping and Spatial Analysis</title>
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#061521;--panel:#0a2030;--panel2:#0d2638;--line:#1a3a4e;
+  --text:#edf6fb;--muted:#8fa6b6;--green:#32d889;--blue:#2477e8;
+  --red:#ff493f;--orange:#ff9d32;--yellow:#f2d44b;--cyan:#36c7e8;
+}
+body{margin:0;background:#03101a;color:var(--text);font-family:Inter,Arial,sans-serif;overflow:hidden}
+.app{height:100vh;display:grid;grid-template-rows:68px 1fr 28px}
+.topbar{display:flex;align-items:center;gap:20px;padding:0 22px;background:#071a29;border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:12px;font-size:27px;font-weight:800;letter-spacing:.5px}
+.pin{width:31px;height:31px;border:5px solid var(--green);border-radius:50% 50% 50% 8px;transform:rotate(-45deg);position:relative}
+.pin:after{content:"";position:absolute;width:7px;height:7px;border-radius:50%;background:var(--green);left:7px;top:7px}
+.title{font-weight:750;font-size:16px}
+.subtitle{font-size:13px;color:#b7c8d3;margin-top:4px}
+.nav{margin-left:auto;display:flex;gap:5px;height:100%}
+.nav button{background:transparent;border:0;color:#e8f1f5;padding:0 16px;font-size:14px;cursor:pointer}
+.nav button.active{background:#073f39;color:var(--green);border-radius:9px;margin:9px 0}
+.user{display:flex;align-items:center;gap:9px;color:#dce8ee;font-size:13px;margin-left:5px}
+.avatar{width:29px;height:29px;border-radius:50%;background:#334a5d;display:grid;place-items:center}
+
+.main{display:grid;grid-template-columns:220px minmax(520px,1fr) 330px;gap:10px;padding:10px;min-height:0}
+.panel{background:linear-gradient(180deg,#092032,#071a29);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.left{padding:13px}
+.section-title{font-size:16px;font-weight:750;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:9px}
+.layer{display:flex;align-items:center;gap:9px;font-size:13px;margin:11px 0;color:#d8e6ed}
+input[type=checkbox]{accent-color:#22a9ef;width:15px;height:15px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--red);display:inline-block}
+.dot.heat{background:radial-gradient(circle,#ffe55d 0 20%,#ff6b34 30%,#e22c32 55%,#243b54 75%)}
+.lineicon{width:17px;height:3px;background:#56bce9;display:inline-block}
+.lineicon.yellow{background:#f0cf33}
+.subhead{color:#d7e3e9;font-size:13px;font-weight:700;margin:19px 0 9px}
+.risk{display:flex;align-items:center;gap:10px;font-size:12px;margin:10px 0}
+.riskbar{width:27px;height:10px;border-radius:5px}
+.red{background:var(--red)}.orange{background:var(--orange)}.yellow{background:var(--yellow)}.green{background:var(--green)}
+.tool{display:flex;align-items:center;gap:11px;font-size:12px;margin:13px 0;color:#cbdbe3}
+.tool i{width:23px;height:23px;border:1px solid #4b687a;border-radius:50%;display:grid;place-items:center;font-style:normal}
+.current{border-top:1px solid var(--line);margin-top:17px;padding-top:14px;font-size:12px;color:var(--muted)}
+.current strong{color:#dce8ee;font-size:13px}
+
+.center{position:relative;min-width:0}
+.map{height:100%;position:relative;overflow:hidden;background:
+ radial-gradient(circle at 47% 53%,rgba(240,50,35,.72) 0 2%,transparent 5%),
+ radial-gradient(circle at 20% 48%,rgba(255,72,37,.65) 0 2%,transparent 7%),
+ radial-gradient(circle at 73% 43%,rgba(255,145,35,.65) 0 2%,transparent 7%),
+ radial-gradient(circle at 57% 76%,rgba(235,48,37,.7) 0 2%,transparent 6%),
+ radial-gradient(circle at 80% 70%,rgba(255,80,30,.65) 0 2%,transparent 7%),
+ linear-gradient(135deg,#173b48 0%,#254a52 28%,#152d3a 54%,#173f48 80%,#092332 100%);
+}
+.map:before{content:"";position:absolute;inset:0;opacity:.35;background:
+ repeating-linear-gradient(22deg,transparent 0 54px,#8aa9a9 55px 56px,transparent 57px 94px),
+ repeating-linear-gradient(112deg,transparent 0 77px,#709399 78px 79px,transparent 80px 124px)}
+.map:after{content:"";position:absolute;inset:0;background:
+ radial-gradient(circle at 36% 37%,#ff342d 0 4px,transparent 5px),
+ radial-gradient(circle at 49% 47%,#ff8b25 0 4px,transparent 5px),
+ radial-gradient(circle at 62% 31%,#ff4a31 0 4px,transparent 5px),
+ radial-gradient(circle at 68% 58%,#ffbb32 0 4px,transparent 5px),
+ radial-gradient(circle at 28% 69%,#ff4134 0 4px,transparent 5px),
+ radial-gradient(circle at 76% 72%,#ff5a2d 0 4px,transparent 5px)}
+.search{position:absolute;z-index:4;left:16px;top:13px;width:385px;background:#0b1e2e;border:1px solid #426276;border-radius:8px;padding:12px 14px;color:#91a9b7;font-size:13px}
+.maptools{position:absolute;z-index:4;left:16px;top:64px;display:flex;flex-direction:column;gap:8px}
+.maptools button{width:38px;height:38px;background:#071a29d9;color:#e8f3f7;border:1px solid #456275;border-radius:7px;font-size:19px}
+.city{position:absolute;z-index:2;font-size:22px;font-weight:800;left:43%;top:48%;text-shadow:0 2px 5px #000}
+.label{position:absolute;z-index:2;font-size:12px;color:#dbe8ec;text-shadow:0 1px 3px #000}
+.l1{left:13%;top:20%}.l2{left:72%;top:28%}.l3{left:31%;top:68%}.l4{left:68%;top:67%}.l5{left:49%;top:34%}
+.route{position:absolute;z-index:3;left:21%;top:29%;width:62%;height:46%;border:3px solid #f2cf31;border-radius:50% 35% 60% 30%;transform:rotate(-12deg);box-shadow:0 0 6px #f2cf31}
+.route2{position:absolute;z-index:3;left:28%;top:38%;width:55%;height:35%;border:3px solid #33d78b;border-radius:35% 65% 40% 55%;transform:rotate(8deg);box-shadow:0 0 7px #33d78b}
+.crash{position:absolute;z-index:5;width:10px;height:10px;border-radius:50%;background:#ff473f;border:1px solid #fff}
+.c1{left:31%;top:32%}.c2{left:43%;top:42%}.c3{left:59%;top:28%}.c4{left:66%;top:49%}.c5{left:25%;top:58%}.c6{left:75%;top:62%}.c7{left:50%;top:70%}.c8{left:81%;top:43%}
+.info{position:absolute;z-index:8;right:15px;top:14px;width:220px;background:#081b2bdf;border:1px solid #47667a;border-radius:8px;padding:14px;font-size:12px;line-height:1.7}
+.info strong{font-size:14px}.info .redtxt{color:#ff574d}
+.bottom{position:absolute;z-index:8;left:15px;bottom:15px;color:#cbdde5;font-size:12px}.north{position:absolute;z-index:8;right:20px;bottom:18px;font-size:26px}
+
+.right{padding:14px}
+.route-title{font-size:16px;font-weight:750;margin-bottom:13px}
+.input{height:42px;border:1px solid #3b596c;border-radius:8px;padding:0 12px;display:flex;align-items:center;justify-content:space-between;margin:8px 0;font-size:13px;color:#dce9ee}
+.swap{font-size:18px}
+.primary{height:38px;width:100%;border:0;border-radius:7px;background:#2478e5;color:white;font-weight:700;margin:7px 0 14px}
+.card{border:1px solid #315266;border-radius:9px;padding:13px;margin-bottom:12px;background:#0a2233}
+.card.safe{border-color:#14775d;background:linear-gradient(135deg,#0a2b2a,#0b2130)}
+.cardhead{display:flex;justify-content:space-between;align-items:center;font-weight:750}
+.badge{background:#0d7d60;color:#59efad;padding:5px 8px;border-radius:15px;font-size:11px}
+.small{font-size:11px;color:#8fa8b7}.value{font-size:13px;font-weight:700}
+.metric{display:flex;justify-content:space-between;margin-top:11px}
+.good{color:#31e08c}.bad{color:#ff5149}
+.details{border:1px solid #315266;border-radius:8px;padding:12px;font-size:13px;margin-top:7px}
+.details span{float:right;color:#8ea5b3}
+
+.bottomgrid{position:absolute;left:10px;right:10px;bottom:10px;height:184px;display:grid;grid-template-columns:1.05fr 1.05fr .85fr 1.1fr;gap:10px;pointer-events:none}
+.widget{pointer-events:auto;background:#071a29ed;border:1px solid var(--line);border-radius:8px;padding:12px;overflow:hidden}
+.widget-title{font-size:13px;font-weight:750;margin-bottom:10px;display:flex;justify-content:space-between}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{background:#0a2132;border:1px solid #29465a;border-radius:6px;padding:8px}
+.stat b{font-size:17px;display:block;margin-top:4px}
+.stat small{font-size:9px;color:#849eae}
+.chart{height:112px;background:linear-gradient(160deg,transparent 45%,#1e5c63 46%,transparent 48%);position:relative}
+.chart:before{content:"";position:absolute;left:10px;right:10px;top:55px;height:2px;background:#3a7f88;transform:rotate(-15deg)}
+.donut{width:93px;height:93px;border-radius:50%;margin:2px auto;background:conic-gradient(var(--red) 0 12.6%,var(--orange) 12.6% 36%,var(--yellow) 36% 70.7%,var(--green) 70.7%);position:relative}
+.donut:after{content:"1,248";position:absolute;inset:19px;background:#071a29;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700}
+.legend{font-size:9px;line-height:1.8;position:absolute;right:8px;top:38px}
+.table{font-size:9px;width:100%;border-collapse:collapse}
+.table th,.table td{text-align:left;padding:6px 3px;border-bottom:1px solid #203b4d;color:#c9d8df}
+.footer{background:#061521;border-top:1px solid #142e40;color:#668091;font-size:10px;display:flex;align-items:center;padding:0 16px}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="topbar">
+  <div class="logo"><span class="pin"></span><span>HRMSA</span></div>
+  <div>
+    <div class="title">Historical Road-Crash Mapping and Spatial Analysis</div>
+    <div class="subtitle">Mandaue City, Cebu</div>
+  </div>
+  <nav class="nav">
+    <button class="active">▣ &nbsp;Map</button><button>▥ &nbsp;Analytics</button>
+    <button>⌘ &nbsp;Route Planner</button><button>▤ &nbsp;Reports</button>
+  </nav>
+  <div class="user">♧ <span class="avatar">●</span> Traffic Enforcer　⌄</div>
+</header>
+
+<main class="main">
+<aside class="panel left">
+  <div class="section-title">▱ &nbsp; Layers</div>
+  <label class="layer"><input type="checkbox" checked><span class="dot"></span>Crash Points</label>
+  <label class="layer"><input type="checkbox" checked><span class="dot heat"></span>Crash Heatmap</label>
+  <label class="layer"><input type="checkbox" checked><span class="lineicon"></span>Road Network</label>
+  <label class="layer"><input type="checkbox" checked><span class="lineicon yellow"></span>Risk Classification</label>
+  <label class="layer"><input type="checkbox">▱ Barangay Boundary</label>
+  <label class="layer"><input type="checkbox">≋ Flood Prone Areas</label>
+  <label class="layer"><input type="checkbox">⌖ Landmarks / POIs</label>
+
+  <div class="subhead">Risk Category</div>
+  <div class="risk"><span class="riskbar red"></span>Very High</div>
+  <div class="risk"><span class="riskbar orange"></span>High</div>
+  <div class="risk"><span class="riskbar yellow"></span>Moderate</div>
+  <div class="risk"><span class="riskbar green"></span>Low</div>
+
+  <div class="subhead">Map Tools</div>
+  <div class="tool"><i>＋</i>Zoom In</div><div class="tool"><i>−</i>Zoom Out</div>
+  <div class="tool"><i>◎</i>Locate Me</div><div class="tool"><i>⌁</i>Measure</div>
+  <div class="tool"><i>⌘</i>Draw Route</div>
+
+  <div class="current">
+    Current View<br><br>
+    <strong>⌗　Mandaue City</strong><br>
+    10.16° N, 123.84° E<br>
+    Elevation: ~16.8 m
+  </div>
+</aside>
+
+<section class="panel center">
+  <div class="map">
+    <div class="search">⌕　Search location, address, or coordinates...</div>
+    <div class="maptools"><button>＋</button><button>−</button><button>◎</button></div>
+    <div class="city">Mandaue City</div>
+    <div class="label l1">Subangdaku</div><div class="label l2">Canduman</div>
+    <div class="label l3">Poblacion</div><div class="label l4">Guadalupe</div><div class="label l5">Cabancalan</div>
+    <div class="route"></div><div class="route2"></div>
+    <span class="crash c1"></span><span class="crash c2"></span><span class="crash c3"></span><span class="crash c4"></span>
+    <span class="crash c5"></span><span class="crash c6"></span><span class="crash c7"></span><span class="crash c8"></span>
+    <div class="info">
+      <strong>🔴 Crash Point</strong><br>
+      Date: 2023-08-14<br>Type: Collision (Vehicle)<br>Severity: <span class="redtxt">Serious Injury</span><br>
+      Coordinates: 10.3102, 123.9124
+    </div>
+    <div class="bottom">0　　1　　2　　3 km</div><div class="north">N<br><small>⌖</small></div>
+
+    <div class="bottomgrid">
+      <div class="widget">
+        <div class="widget-title">♨ Crash Statistics <span>Last 3 Years⌄</span></div>
+        <div class="stats">
+          <div class="stat">Total Crashes<b>4,892</b><small>↑ 12% vs. previous period</small></div>
+          <div class="stat">Fatalities<b>243</b><small>↑ 8% vs. previous period</small></div>
+          <div class="stat">Injured<b>3,671</b><small>↑ 11% vs. previous period</small></div>
+          <div class="stat">Property Damage Only<b>978</b><small>↓ 6% vs. previous period</small></div>
+        </div>
+      </div>
+      <div class="widget">
+        <div class="widget-title">♧ Spatial Analysis <span>Density　 Hotspots　 Cluster</span></div>
+        <div class="chart"><div style="font-size:10px;padding:8px;color:#91aab7">Crash Density<br><b>crashes per km²</b><br><br>■ &gt;150<br>■ 101–150<br>■ 51–100<br>■ 21–50</div></div>
+      </div>
+      <div class="widget" style="position:relative">
+        <div class="widget-title">⌘ Risk Classification Distribution</div>
+        <div class="donut"></div>
+        <div class="legend"><div>🔴 Red 12.6%</div><div>🟠 Orange 23.4%</div><div>🟡 Yellow 34.7%</div><div>🟢 Green 29.3%</div></div>
+      </div>
+      <div class="widget">
+        <div class="widget-title">⌖ Recent Crashes <span>View All</span></div>
+        <table class="table"><tr><th>Date</th><th>Location</th><th>Severity</th></tr>
+          <tr><td>2025-09-18</td><td>M.C. Briones St.</td><td>🟠 Serious Injury</td></tr>
+          <tr><td>2025-09-16</td><td>A.S. Fortuna St.</td><td>🟡 Minor Injury</td></tr>
+          <tr><td>2025-09-14</td><td>Gov. M. Cuenco Ave.</td><td>🔴 Fatal</td></tr>
+          <tr><td>2025-09-12</td><td>Plaridel St.</td><td>🟢 Property Damage Only</td></tr>
+          <tr><td>2025-09-10</td><td>Looc Rd.</td><td>🟡 Minor Injury</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<aside class="panel right">
+  <div class="route-title">♧ Route Recommendation</div>
+  <div class="input">⌖　Mandaue City Hall <span>⌄</span></div>
+  <div class="input">●　APM Terminal <span class="swap">↕</span></div>
+  <button class="primary">⌘ &nbsp; Find Safer Route</button>
+
+  <div class="card safe">
+    <div class="cardhead"><span>🛡 Recommended Route</span><span class="badge">−42% risk</span></div>
+    <div class="small">(Lower Risk)</div>
+    <div class="metric"><span>Estimated Travel Time</span><b>18 min</b></div>
+    <div class="metric"><span>Distance</span><b>6.8 km</b></div>
+    <div class="metric"><span>Cumulative Crash-Risk Score</span><b class="good">32.4</b></div>
+  </div>
+
+  <div class="card">
+    <div class="cardhead">Default / Shortest Route</div>
+    <div class="metric"><span>Estimated Travel Time</span><b>16 min</b></div>
+    <div class="metric"><span>Distance</span><b>6.2 km</b></div>
+    <div class="metric"><span>Cumulative Crash-Risk Score</span><b class="bad">55.8</b></div>
+  </div>
+
+  <div class="details">◉　Route Details <span>⌄</span></div>
+</aside>
+</main>
+
+<footer class="footer">HRMSA Research Prototype · Historical Road-Crash Mapping and Spatial Analysis · Mandaue City</footer>
+</div>
+</body>
+</html>
